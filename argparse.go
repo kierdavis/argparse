@@ -41,7 +41,7 @@ func (a *argsList) Next() (s string) {
 	}
 
 	if a.EOF() {
-		return ""
+		panic(CommandLineError("Not enough arguments"))
 	}
 
 	s = a.items[a.ptr]
@@ -141,7 +141,7 @@ func (p *ArgumentParser) Help() {
 			s := posArgStrs[i]
 			fmt.Print(s)
 			fmt.Print(strings.Repeat(" ", l-len(s)))
-			fmt.Print(wordWrap(posArg.Help, p.WordWrapWidth, l))
+			fmt.Print(wordWrap(posArg.Help, p.WordWrapWidth, l+1))
 		}
 	}
 
@@ -171,7 +171,7 @@ func (p *ArgumentParser) Help() {
 			s := optArgStrs[i]
 			fmt.Print(s)
 			fmt.Print(strings.Repeat(" ", l-len(s)))
-			fmt.Print(wordWrap(optArg.Help, p.WordWrapWidth, l))
+			fmt.Print(wordWrap(optArg.Help, p.WordWrapWidth, l+1))
 		}
 	}
 }
@@ -199,6 +199,15 @@ func (p *ArgumentParser) Option(shortName byte, longName string, dest string, nA
 }
 
 func (p *ArgumentParser) Parse(values interface{}) (err error) {
+	defer func() {
+		if x := recover(); x != nil {
+			ok := false
+			if err, ok = x.(error); ok {
+				return
+			}
+		}
+	}()
+
 	args := &argsList{os.Args[1:], 0, ""}
 	dest := reflect.ValueOf(values)
 	posArgs := []string{}
@@ -231,16 +240,8 @@ func (p *ArgumentParser) Parse(values interface{}) (err error) {
 	}
 
 	posArgsList := &argsList{posArgs, 0, ""}
-	i := 0
 
-	for !posArgsList.EOF() {
-		if i >= len(p.PositionalArguments) {
-			p.Error("Unexpected extra positional arguments")
-		}
-
-		posArg := p.PositionalArguments[i]
-		i++
-
+	for _, posArg := range p.PositionalArguments {
 		err = posArg.parse(posArgsList, dest)
 		if err != nil {
 			return err
