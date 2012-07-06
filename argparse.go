@@ -199,14 +199,16 @@ func (p *ArgumentParser) Option(shortName byte, longName string, dest string, nA
 }
 
 func (p *ArgumentParser) Parse(values interface{}) (err error) {
-	defer func() {
-		if x := recover(); x != nil {
-			ok := false
-			if err, ok = x.(error); ok {
-				return
+	/*
+		defer func() {
+			if x := recover(); x != nil {
+				ok := false
+				if err, ok = x.(error); ok {
+					return
+				}
 			}
-		}
-	}()
+		}()
+	*/
 
 	args := &argsList{os.Args[1:], 0, ""}
 	dest := reflect.ValueOf(values)
@@ -299,13 +301,13 @@ type PositionalArgument struct {
 }
 
 func (arg *PositionalArgument) parse(args *argsList, destStruct reflect.Value) (err error) {
-	if arg.NArgs == 0 {
-		return arg.Action(0, nil, nilValue)
-	}
-
 	dest := destStruct.FieldByName(arg.Dest)
 	if !dest.IsValid() {
 		return fmt.Errorf("Invalid destination struct field: %s", arg.Dest)
+	}
+
+	if arg.NArgs == 0 {
+		return arg.Action(0, nil, dest)
 	}
 
 	return arg.Action(arg.NArgs, readArgStrings(arg.NArgs, args), dest)
@@ -322,13 +324,13 @@ type OptionalArgument struct {
 }
 
 func (arg *OptionalArgument) parse(args *argsList, destStruct reflect.Value) (err error) {
-	if arg.NArgs == 0 {
-		return arg.Action(0, nil, nilValue)
-	}
-
 	dest := destStruct.FieldByName(arg.Dest)
 	if !dest.IsValid() {
 		return fmt.Errorf("Invalid destination struct field: %s", arg.Dest)
+	}
+
+	if arg.NArgs == 0 {
+		return arg.Action(0, nil, dest)
 	}
 
 	return arg.Action(arg.NArgs, readArgStrings(arg.NArgs, args), dest)
@@ -336,7 +338,7 @@ func (arg *OptionalArgument) parse(args *argsList, destStruct reflect.Value) (er
 
 type ActionFunc func(int, []string, reflect.Value) error
 
-func Choice(subAction ActionFunc, choices []string) (action ActionFunc) {
+func Choice(subAction ActionFunc, choices ...string) (action ActionFunc) {
 	return func(nArgs int, args []string, value reflect.Value) (err error) {
 		for _, arg := range args {
 			matched := false
@@ -353,6 +355,13 @@ func Choice(subAction ActionFunc, choices []string) (action ActionFunc) {
 		}
 
 		return subAction(nArgs, args, value)
+	}
+}
+
+func StoreConst(v interface{}) (action ActionFunc) {
+	return func(nArgs int, args []string, value reflect.Value) (err error) {
+		value.Set(reflect.ValueOf(v))
+		return nil
 	}
 }
 
