@@ -152,14 +152,25 @@ func (p *ArgumentParser) Help() {
 		l := 0
 
 		for _, optArg := range p.OptionalArguments {
-			var s string
+			ol := []string{}
 
-			if optArg.Metavar == "" {
-				s = fmt.Sprintf("  -%c, --%s  ", optArg.ShortName, optArg.LongName)
-			} else {
-				s = fmt.Sprintf("  -%c %s, --%s=%s  ", optArg.ShortName, optArg.Metavar, optArg.LongName, optArg.Metavar)
+			if optArg.ShortName != 0 {
+				if optArg.Metavar == "" {
+					ol = append(ol, fmt.Sprintf("-%c", optArg.ShortName))
+				} else {
+					ol = append(ol, fmt.Sprintf("-%c %s", optArg.ShortName, optArg.Metavar))
+				}
 			}
 
+			if optArg.LongName != "" {
+				if optArg.Metavar == "" {
+					ol = append(ol, fmt.Sprintf("--%s", optArg.LongName))
+				} else {
+					ol = append(ol, fmt.Sprintf("--%s=%s", optArg.LongName, optArg.Metavar))
+				}
+			}
+
+			s := "  " + strings.Join(ol, ", ") + " "
 			optArgStrs = append(optArgStrs, s)
 
 			if len(s) > l {
@@ -301,9 +312,13 @@ type PositionalArgument struct {
 }
 
 func (arg *PositionalArgument) parse(args *argsList, destStruct reflect.Value) (err error) {
-	dest := destStruct.FieldByName(arg.Dest)
-	if !dest.IsValid() {
-		return fmt.Errorf("Invalid destination struct field: %s", arg.Dest)
+	var dest reflect.Value
+
+	if arg.Dest != "" {
+		dest = destStruct.FieldByName(arg.Dest)
+		if !dest.IsValid() {
+			return fmt.Errorf("Invalid destination struct field: %s", arg.Dest)
+		}
 	}
 
 	if arg.NArgs == 0 {
@@ -324,9 +339,13 @@ type OptionalArgument struct {
 }
 
 func (arg *OptionalArgument) parse(args *argsList, destStruct reflect.Value) (err error) {
-	dest := destStruct.FieldByName(arg.Dest)
-	if !dest.IsValid() {
-		return fmt.Errorf("Invalid destination struct field: %s", arg.Dest)
+	var dest reflect.Value
+
+	if arg.Dest != "" {
+		dest = destStruct.FieldByName(arg.Dest)
+		if !dest.IsValid() {
+			return fmt.Errorf("Invalid destination struct field: %s", arg.Dest)
+		}
 	}
 
 	if arg.NArgs == 0 {
