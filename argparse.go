@@ -210,16 +210,16 @@ func (p *ArgumentParser) Option(shortName byte, longName string, dest string, nA
 }
 
 func (p *ArgumentParser) Parse(values interface{}) (err error) {
-	/*
-		defer func() {
-			if x := recover(); x != nil {
-				ok := false
-				if err, ok = x.(error); ok {
-					return
-				}
+	defer func() {
+		if x := recover(); x != nil {
+			e, ok := x.(CommandLineError)
+			if ok {
+				err = e
+			} else {
+				panic(x)
 			}
-		}()
-	*/
+		}
+	}()
 
 	args := &argsList{os.Args[1:], 0, ""}
 	dest := reflect.ValueOf(values)
