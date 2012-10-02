@@ -210,6 +210,10 @@ func (p *ArgumentParser) Option(shortName byte, longName string, dest string, nA
 }
 
 func (p *ArgumentParser) Parse(values interface{}) (err error) {
+	return p.ParseArgs(values, os.Args[1:])
+}
+
+func (p *ArgumentParser) ParseArgs(values interface{}, rawArgs []string) (err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			e, ok := x.(CommandLineError)
@@ -221,7 +225,7 @@ func (p *ArgumentParser) Parse(values interface{}) (err error) {
 		}
 	}()
 
-	args := &argsList{os.Args[1:], 0, ""}
+	args := &argsList{rawArgs, 0, ""}
 	dest := reflect.ValueOf(values)
 	posArgs := []string{}
 
