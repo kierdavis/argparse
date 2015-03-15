@@ -10,6 +10,7 @@ import (
 )
 
 var nilValue reflect.Value
+var exitFunc func(int) = os.Exit
 
 const (
 	Optional   = -1
@@ -86,7 +87,7 @@ func New(description string) (p *ArgumentParser) {
 
 	helpCallback := func(nArgs int, args []string, dest reflect.Value) (err error) {
 		p.Help()
-		os.Exit(0)
+		exitFunc(0)
 		return nil
 	}
 
@@ -98,7 +99,7 @@ func New(description string) (p *ArgumentParser) {
 func (p *ArgumentParser) Error(s string) {
 	p.Usage()
 	fmt.Printf("\nTry %s --help for help\n\n*** %s\n", os.Args[0], s)
-	os.Exit(2)
+	exitFunc(2)
 }
 
 func (p *ArgumentParser) Usage() {
