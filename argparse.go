@@ -236,6 +236,14 @@ func (p *ArgumentParser) ParseArgs(values interface{}, rawArgs []string) (err er
 	for !args.EOF() {
 		argStr := args.Next()
 
+		if argStr == "--" {
+			// interpret all remaining arguments as positionals
+			for !args.EOF() {
+				posArgs = append(posArgs, args.Next())
+			}
+			break
+		}
+
 		if len(argStr) > 1 && argStr[0] == '-' {
 			if argStr[1] == '-' {
 				err = p.parseLongOption(argStr[2:], args, dest)
