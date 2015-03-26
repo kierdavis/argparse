@@ -1,3 +1,7 @@
+/*
+	The package argparse provides an alternative to the flag
+	package to parse the command line.
+*/
 package argparse
 
 import (
@@ -18,6 +22,8 @@ const (
 	ZeroOrMore = -3
 )
 
+// A CommandLineError is returned upon parsing error
+// of the command line
 type CommandLineError string
 
 func (err CommandLineError) Error() (s string) {
@@ -70,13 +76,26 @@ func (a *argsList) BackUp() {
 	a.ptr--
 }
 
+//
+// ArgumentParser is the object which will be used to parse the command line.
+// It will be allocated with the New function.
+//
 type ArgumentParser struct {
-	Description         string
-	WordWrapWidth       int
+	// Description contains a description line of the program.
+	// It will be used for the help message.
+	Description string
+	// The width used to align the help message
+	WordWrapWidth int
+	// PositionalArguments is an array of expected positional
+	// argument from the command line
 	PositionalArguments []*PositionalArgument
-	OptionalArguments   []*OptionalArgument
+	// OptionalArguments is an array of possible argument from the command line
+	OptionalArguments []*OptionalArgument
 }
 
+// Allocates a new ArgumentParser object.
+// It takes a string describing the program which will be used for the help message.
+// The help switch "-h" and "--help" is automatically added to the command line parser.
 func New(description string) (p *ArgumentParser) {
 	p = &ArgumentParser{
 		Description:         description,
@@ -96,12 +115,16 @@ func New(description string) (p *ArgumentParser) {
 	return p
 }
 
+// The Error method output the usage message, the error string parameter
+// and Exit the process
 func (p *ArgumentParser) Error(s string) {
 	p.Usage()
 	fmt.Printf("\nTry %s --help for help\n\n*** %s\n", os.Args[0], s)
 	exitFunc(2)
 }
 
+// The Usage() method output a short description of the program
+// command line based on the added optional and positional arguments
 func (p *ArgumentParser) Usage() {
 	optionsStr := ""
 	if len(p.OptionalArguments) >= 0 {
@@ -120,6 +143,8 @@ func (p *ArgumentParser) Usage() {
 	}
 }
 
+// The Help() method display a long description of the program
+// command line based on the added optional and positional arguments
 func (p *ArgumentParser) Help() {
 	p.Usage()
 
@@ -188,6 +213,14 @@ func (p *ArgumentParser) Help() {
 	}
 }
 
+// Argument() add a new positional argument to the parser.
+// dest is the field name of the structure given as argument to the Parse() method
+// which will be filled with the content of the positional argument.
+// nArgs is the number of argument from the command line which will be given
+// to the action ActionFunc to handle this positional parameter.
+// action is the ActionFunc handler which will be used to handle this positional parameter.
+// metavar is the name of the argument which should appear on the help message for this
+// positional parameter.
 func (p *ArgumentParser) Argument(dest string, nArgs int, action ActionFunc, metavar string, help string) {
 	p.PositionalArguments = append(p.PositionalArguments, &PositionalArgument{
 		Dest:    dest,
@@ -198,6 +231,16 @@ func (p *ArgumentParser) Argument(dest string, nArgs int, action ActionFunc, met
 	})
 }
 
+// Option() add a new positional argument to the parser.
+// shortName is the single character short option for this optional parameter.
+// longName is the multi character long option for this optional parameter.
+// dest is the field name of the structure given as argument to the Parse() method
+// which will be filled with the content of the positional argument.
+// nArgs is the number of command line word which will be consumed from the command line
+// for this optional argument.
+// action is the ActionFunc handler which will be used to handle this positional parameter.
+// metavar is the name of the argument which should appear on the help message for this
+// optional parameter.
 func (p *ArgumentParser) Option(shortName byte, longName string, dest string, nArgs int, action ActionFunc, metavar string, help string) {
 	p.OptionalArguments = append(p.OptionalArguments, &OptionalArgument{
 		ShortName: shortName,
@@ -210,10 +253,14 @@ func (p *ArgumentParser) Option(shortName byte, longName string, dest string, nA
 	})
 }
 
+// Parse() parses the command line and fill the structure given as parameter
+// with the result of the parsing
 func (p *ArgumentParser) Parse(values interface{}) (err error) {
 	return p.ParseArgs(values, os.Args[1:])
 }
 
+// Parse() parses an arbitrary array of string and fill the structure given
+// as parameter with the resutl of the parsing
 func (p *ArgumentParser) ParseArgs(values interface{}, rawArgs []string) (err error) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -368,8 +415,11 @@ func (arg *OptionalArgument) parse(args *argsList, destStruct reflect.Value) (er
 	return arg.Action(arg.NArgs, readArgStrings(arg.NArgs, args), dest)
 }
 
+// An ActionFunc is used for handling a command line argument.
+// The argparse module provides a few very commonly used ActionFunc
 type ActionFunc func(int, []string, reflect.Value) error
 
+// Return an ActionFunc which will check the argument is one of a set of choice.
 func Choice(subAction ActionFunc, choices ...string) (action ActionFunc) {
 	return func(nArgs int, args []string, value reflect.Value) (err error) {
 		for _, arg := range args {
@@ -390,6 +440,8 @@ func Choice(subAction ActionFunc, choices ...string) (action ActionFunc) {
 	}
 }
 
+// StoreConst() returns a function which will store the constant value given
+// as parameter in the dest field associated with the optional or positional parmeter.
 func StoreConst(v interface{}) (action ActionFunc) {
 	return func(nArgs int, args []string, value reflect.Value) (err error) {
 		value.Set(reflect.ValueOf(v))
@@ -397,6 +449,8 @@ func StoreConst(v interface{}) (action ActionFunc) {
 	}
 }
 
+// Store() is an ActionFunc which stores the associated argument of the parameter
+// in the wanted field of the structure
 func Store(nArgs int, args []string, value reflect.Value) (err error) {
 	t := value.Type()
 
@@ -425,6 +479,10 @@ func Store(nArgs int, args []string, value reflect.Value) (err error) {
 	return nil
 }
 
+// Append is an ActionFunc which append the content of the argument to the
+// associated structure field.
+// This ActionFunc can be used for optional parameters which can appear
+// several time on the command line with different values.
 func Append(nArgs int, args []string, value reflect.Value) (err error) {
 	t := value.Type()
 
