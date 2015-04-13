@@ -254,7 +254,7 @@ func (p *ArgumentParser) Option(shortName byte, longName string, dest string, nA
 }
 
 // Parse() parses the command line and fill the structure given as parameter
-// with the result of the parsing
+// with the result of the parsing.
 func (p *ArgumentParser) Parse(values interface{}) (err error) {
 	return p.ParseArgs(values, os.Args[1:])
 }
@@ -441,7 +441,7 @@ func Choice(subAction ActionFunc, choices ...string) (action ActionFunc) {
 }
 
 // StoreConst() returns a function which will store the constant value given
-// as parameter in the dest field associated with the optional or positional parmeter.
+// as parameter in the dest field associated with the optional or positional parameter.
 func StoreConst(v interface{}) (action ActionFunc) {
 	return func(nArgs int, args []string, value reflect.Value) (err error) {
 		value.Set(reflect.ValueOf(v))
@@ -477,6 +477,20 @@ func Store(nArgs int, args []string, value reflect.Value) (err error) {
 
 	value.Set(slice)
 	return nil
+}
+
+// AppendConst() returns an ActionFunc which append the constant value
+// as parameter in the dest field associated with the optional or positional parameter.
+// The named destination field must be a slice type.
+func AppendConst(v interface{}) ActionFunc {
+	return func (nArgs int, args[]string, value reflect.Value) error {
+		if value.Kind() != reflect.Slice {
+			return fmt.Errorf("Invalid kind for Append destination: %s", value.Kind().String())
+		}
+
+		value.Set(reflect.Append(value, reflect.ValueOf(v)))
+		return nil
+	}
 }
 
 // Append is an ActionFunc which append the content of the argument to the
